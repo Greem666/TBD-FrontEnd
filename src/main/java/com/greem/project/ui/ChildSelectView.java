@@ -1,8 +1,7 @@
 package com.greem.project.ui;
 
-import com.greem.project.backend.BackEndClient;
 import com.greem.project.domain.ChildDto;
-import com.vaadin.flow.component.Component;
+import com.greem.project.service.ChildService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -14,19 +13,22 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.Route;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @Route("")
 @CssImport("./styles/baby-select-view-styles.css")
 public class ChildSelectView extends VerticalLayout {
 
-    public ChildSelectView(@Autowired BackEndClient backEndClient) {
+    private ChildService childService;
+    private AddChildForm form;
+
+    public ChildSelectView(ChildService childService) {
+        this.childService = childService;
 
         H1 babyMonitorLogo = new H1("Baby Monitor App");
         H2 selectBabyCaption = new H2("Available babies");
 
-        HorizontalLayout availableBabiesBar = createAvailableChildrenBar(backEndClient);
-        Button addNewBabyButton = createAddNewChildButton();
+        HorizontalLayout availableBabiesBar = createAvailableChildrenBar(childService);
+        Button addNewBabyButton = createAddNewChildButton(childService);
 
         add(babyMonitorLogo, selectBabyCaption, availableBabiesBar, addNewBabyButton);
         setHeightFull();
@@ -34,10 +36,10 @@ public class ChildSelectView extends VerticalLayout {
         setJustifyContentMode(JustifyContentMode.CENTER);
     }
 
-    private HorizontalLayout createAvailableChildrenBar(BackEndClient backEndClient) {
+    private HorizontalLayout createAvailableChildrenBar(ChildService childService) {
         HorizontalLayout availableBabiesBar = new HorizontalLayout();
 
-        for (ChildDto childDto: backEndClient.getAllChildren()) {
+        for (ChildDto childDto: childService.getAllChildren()) {
             availableBabiesBar.add(createBabySelectionButton(childDto));
         }
 
@@ -47,7 +49,7 @@ public class ChildSelectView extends VerticalLayout {
     private VerticalLayout createBabySelectionButton(ChildDto childDto) {
         HorizontalLayout functionButtonsBar = new HorizontalLayout();
 
-        Button selectChildButton = new Button(childDto.getFullName());
+        Button selectChildButton = new Button(childDto.getFirstName() + " " + childDto.getLastName());
         selectChildButton.addClassName("select-child-button");
 
         Button deleteChildButton = new Button("", new Icon(VaadinIcon.DEL));
@@ -60,11 +62,11 @@ public class ChildSelectView extends VerticalLayout {
 
         return childSelectDeleteBlock;
     }
-    private Button createAddNewChildButton() {
+    private Button createAddNewChildButton(ChildService childService) {
         Button addNewBabyButton = new Button("", new Icon(VaadinIcon.PLUS));
 
         addNewBabyButton.addClickListener(e -> {
-            createAddChildDialogWindow();
+            createAddChildDialogWindow(childService);
         });
 
         addNewBabyButton.addClassName("add-new-baby-button");
@@ -72,38 +74,31 @@ public class ChildSelectView extends VerticalLayout {
         return addNewBabyButton;
     }
 
-    private void createAddChildDialogWindow() {
+    private void createAddChildDialogWindow(ChildService childService) {
         Dialog dialog = new Dialog();
         dialog.setCloseOnEsc(false);
         dialog.setCloseOnOutsideClick(false);
 
         VerticalLayout content = new VerticalLayout();
         content.setDefaultHorizontalComponentAlignment(Alignment.CENTER);
-        AddChildForm form = new AddChildForm();
+        form = new AddChildForm();
         content.add(new H3("Add new child"), form);
 
-        Button saveButton = form.getSave();
-        Button cancelButton = form.getCancel();
-
-        saveButton.addClickListener(e -> {
-           dialog.close();
-        });
-
-        cancelButton.addClickListener(e -> {
+        form.addListener(AddChildForm.SaveEvent.class, e -> {
+            addChild(e);
             dialog.close();
         });
+        form.addListener(AddChildForm.CancelEvent.class, e -> dialog.close());
+
 
         dialog.add(content);
 
         dialog.open();
     }
 
-    private Button getButtonById(Component content, String id) {
-        return content.getChildren()
-                .flatMap(Component::getChildren)
-                .filter(component -> component.getId().orElseGet(String::new).equals(id))
-                .findFirst()
-                .map(component -> (Button) component)
-                .orElseThrow(NullPointerException::new);
+    private void addChild(AddChildForm.SaveEvent evt) {
+        childService.addChild(evt.getChildDto());
     }
+
+
 }

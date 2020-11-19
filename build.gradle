@@ -30,6 +30,9 @@ dependencies {
 
     testCompileOnly 'org.projectlombok:lombok:1.18.16'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.16'
+
+    // TRANSFORMATION TO JSON
+    compile('com.google.code.gson:gson:2.8.2')
 }
 
 dependencyManagement {
